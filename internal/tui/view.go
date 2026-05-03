@@ -63,11 +63,11 @@ func (m model) renderHero() string {
 	}, "\n")
 
 	word := strings.Join([]string{
-		" RRRR   EEEEE   QQQ   III  U   U  M   M",
-		" R   R  E      Q   Q   I   U   U  MM MM",
-		" RRRR   EEEE   Q   Q   I   U   U  M M M",
-		" R  R   E      Q  QQ   I   U   U  M   M",
-		" R   R  EEEEE   QQQQ  III   UUU   M   M",
+		"  ____   _____   ___    ___   _   _   __  __",
+		" |  _ \\ | ____| / _ \\  |_ _| | | | | |  \\/  |",
+		" | |_) ||  _|  | | | |  | |  | | | | | |\\/| |",
+		" |  _ < | |___ | |_| |  | |  | |_| | | |  | |",
+		" |_| \\_\\|_____| \\__\\_\\ |___|  \\___/  |_|  |_|",
 	}, "\n")
 
 	hero := lipgloss.JoinVertical(
