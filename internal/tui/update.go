@@ -28,11 +28,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c", "esc":
 			return m, tea.Quit
 		case "n":
+			m.requestForm = newRequestForm()
 			m.mode = modeRequestForm
 			m.status = ""
 			m.err = nil
 			return m, nil
 		case "v":
+			m.envForm = newEnvForm()
 			m.mode = modeEnvForm
 			m.status = ""
 			m.err = nil
@@ -100,10 +102,19 @@ func (m model) updateRequestForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "ctrl+s":
 		return m, m.sendRequestCmd()
-	case "tab", "shift+tab":
-		m.requestForm = focusRequestField(m.requestForm, msg.String() == "shift+tab")
+	case "tab", "down", "j", "ctrl+n":
+		m.requestForm = focusRequestField(m.requestForm, false)
 		return m, nil
-	case "left", "right", "m":
+	case "shift+tab", "up", "k", "ctrl+p":
+		m.requestForm = focusRequestField(m.requestForm, true)
+		return m, nil
+	case "m", "ctrl+right":
+		m.requestForm = cycleMethod(m.requestForm, false)
+		return m, nil
+	case "ctrl+left":
+		m.requestForm = cycleMethod(m.requestForm, true)
+		return m, nil
+	case "left", "right":
 		if m.requestForm.focus == 0 {
 			m.requestForm = cycleMethod(m.requestForm, msg.String() == "left")
 			return m, nil
@@ -133,8 +144,11 @@ func (m model) updateEnvForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "ctrl+s", "enter":
 		return m, m.saveEnvCmd()
-	case "tab", "shift+tab":
-		m.envForm = focusEnvField(m.envForm, msg.String() == "shift+tab")
+	case "tab", "down", "j", "ctrl+n":
+		m.envForm = focusEnvField(m.envForm, false)
+		return m, nil
+	case "shift+tab", "up", "k", "ctrl+p":
+		m.envForm = focusEnvField(m.envForm, true)
 		return m, nil
 	}
 

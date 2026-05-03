@@ -63,17 +63,18 @@ func (m model) renderHero() string {
 	}, "\n")
 
 	word := strings.Join([]string{
-		"  ____  _____  ___  _   _  __  __",
-		" |  _ \\| ____|/ _ \\| | | ||  \\/  |",
-		" | |_) |  _| | | | | | | || |\\/| |",
-		" |  _ <| |___| |_| | |_| || |  | |",
-		" |_| \\_\\_____|\\__\\_\\\\___/ |_|  |_|",
+		" RRRR   EEEEE   QQQ   III  U   U  M   M",
+		" R   R  E      Q   Q   I   U   U  MM MM",
+		" RRRR   EEEE   Q   Q   I   U   U  M M M",
+		" R  R   E      Q  QQ   I   U   U  M   M",
+		" R   R  EEEEE   QQQQ  III   UUU   M   M",
 	}, "\n")
 
 	hero := lipgloss.JoinVertical(
 		lipgloss.Center,
 		logoBlue.Render(icon),
 		logoViolet.Render(word),
+		"",
 		welcomeStyle.Render("Welcome to Reqium!"),
 		subtitleStyle.Render("Your terminal API workspace. Compose, send, inspect, repeat."),
 	)
@@ -174,12 +175,12 @@ func (m model) renderRequestForm() string {
 		builder.WriteString(badStyle.Render(m.err.Error()) + "\n")
 	}
 
-	builder.WriteString(field("Method", m.renderMethodPicker()) + "\n")
-	builder.WriteString(field("URL", m.requestForm.url.View()) + "\n")
-	builder.WriteString(field("Environment", m.requestForm.env.View()) + "\n")
-	builder.WriteString(field("Headers", m.requestForm.headers.View()) + "\n")
-	builder.WriteString(field("JSON Body", m.requestForm.body.View()) + "\n")
-	builder.WriteString(helpStyle.Render("tab next field  m/left/right method  ctrl+s send  esc dashboard"))
+	builder.WriteString(m.field("Method", m.renderMethodPicker(), m.requestForm.focus == 0) + "\n")
+	builder.WriteString(m.field("URL", m.requestForm.url.View(), m.requestForm.focus == 1) + "\n")
+	builder.WriteString(m.field("Environment", m.requestForm.env.View(), m.requestForm.focus == 2) + "\n")
+	builder.WriteString(m.field("Headers", m.requestForm.headers.View(), m.requestForm.focus == 3) + "\n")
+	builder.WriteString(m.field("JSON Body", m.requestForm.body.View(), m.requestForm.focus == 4) + "\n")
+	builder.WriteString(helpStyle.Render("tab/down/j next  shift+tab/up/k previous  m method  ctrl+s send  esc dashboard"))
 	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
@@ -206,15 +207,21 @@ func (m model) renderEnvForm() string {
 	if m.err != nil {
 		builder.WriteString(badStyle.Render(m.err.Error()) + "\n")
 	}
-	builder.WriteString(field("Environment", m.envForm.env.View()) + "\n")
-	builder.WriteString(field("Key", m.envForm.key.View()) + "\n")
-	builder.WriteString(field("Value", m.envForm.value.View()) + "\n")
-	builder.WriteString(helpStyle.Render("tab next field  enter/ctrl+s save  esc dashboard"))
+	builder.WriteString(m.field("Environment", m.envForm.env.View(), m.envForm.focus == 0) + "\n")
+	builder.WriteString(m.field("Key", m.envForm.key.View(), m.envForm.focus == 1) + "\n")
+	builder.WriteString(m.field("Value", m.envForm.value.View(), m.envForm.focus == 2) + "\n")
+	builder.WriteString(helpStyle.Render("tab/down/j next  shift+tab/up/k previous  enter/ctrl+s save  esc dashboard"))
 	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
-func field(label string, value string) string {
-	return labelStyle.Render(label) + "\n" + value + "\n"
+func (m model) field(label string, value string, focused bool) string {
+	marker := "  "
+	style := fieldStyle
+	if focused {
+		marker = "> "
+		style = activeField
+	}
+	return marker + labelStyle.Render(label) + "\n" + style.Width(clamp(m.width-22, 68, 96)).Render(value)
 }
 
 func actionCard(key string, title string, description string) string {

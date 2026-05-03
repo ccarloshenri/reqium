@@ -13,6 +13,8 @@ var (
 	panelStyle     = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(1, 2)
 	softPanelStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("238")).Padding(1, 2)
 	sidebarStyle   = softPanelStyle.Width(34)
+	fieldStyle     = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("238")).Padding(0, 1)
+	activeField    = fieldStyle.BorderForeground(lipgloss.Color("86"))
 	tabStyle       = lipgloss.NewStyle().Padding(0, 1)
 	activeTab      = tabStyle.Bold(true).Foreground(lipgloss.Color("229")).Background(lipgloss.Color("62"))
 	labelStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("117")).Bold(true)
