@@ -190,7 +190,7 @@ func (m model) renderRequestForm() string {
 	if m.requestForm.focus == 4 {
 		builder.WriteString(m.renderVariableAutocomplete() + "\n")
 	}
-	builder.WriteString(helpStyle.Render("tab next  shift+tab previous  ctrl+left/right method  ctrl+space complete variable  ctrl+s send  esc dashboard"))
+	builder.WriteString(helpStyle.Render("tab next  shift+tab previous  ctrl+left/right method  type {{ then tab/enter complete  ctrl+s send  esc dashboard"))
 	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
@@ -299,7 +299,7 @@ func (m model) renderVariableAutocomplete() string {
 	return softPanelStyle.Width(clamp(m.width-22, 68, 96)).Render(
 		labelStyle.Render("Environment variables") + "\n" +
 			strings.Join(items, " ") + "\n" +
-			helpStyle.Render("ctrl+space inserts the highlighted variable"),
+			helpStyle.Render("tab, enter, ctrl+space or ctrl+@ inserts the highlighted variable"),
 	)
 }
 

@@ -57,10 +57,12 @@ q       Quit
 In the request composer:
 
 ```text
-tab                Move to the next field
+tab                Move to the next field, or complete the highlighted variable when suggestions are open
 shift+tab          Move to the previous field
+enter              Complete the highlighted variable when suggestions are open
 ctrl+left/right    Cycle HTTP method
-ctrl+space         Complete the highlighted environment variable after typing `{{`
+ctrl+space         Complete variable in terminals that support it
+ctrl+@             Complete variable in terminals that emit Ctrl+Space as Ctrl+@
 ctrl+s             Send request
 esc                Return to dashboard
 ```

@@ -94,7 +94,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) updateRequestForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
+	key := msg.String()
+
+	if m.variableCompletionActive() && len(m.variableSuggestions()) > 0 && isVariableCompletionKey(key) {
+		m.requestForm = m.applyVariableCompletion(m.requestForm)
+		return m, nil
+	}
+
+	switch key {
 	case "esc":
 		m.mode = modeDashboard
 		return m, nil
@@ -102,7 +109,7 @@ func (m model) updateRequestForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "ctrl+s":
 		return m, m.sendRequestCmd()
-	case "ctrl+space":
+	case "ctrl+space", "ctrl+@":
 		m.requestForm = m.applyVariableCompletion(m.requestForm)
 		return m, nil
 	case "tab", "ctrl+n":
@@ -119,7 +126,7 @@ func (m model) updateRequestForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "left", "right":
 		if m.requestForm.focus == 0 {
-			m.requestForm = cycleMethod(m.requestForm, msg.String() == "left")
+			m.requestForm = cycleMethod(m.requestForm, key == "left")
 			return m, nil
 		}
 	}
@@ -136,6 +143,15 @@ func (m model) updateRequestForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.requestForm.body, cmd = m.requestForm.body.Update(msg)
 	}
 	return m, cmd
+}
+
+func isVariableCompletionKey(key string) bool {
+	switch key {
+	case "tab", "enter", "ctrl+space", "ctrl+@":
+		return true
+	default:
+		return false
+	}
 }
 
 func (m model) updateEnvForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
