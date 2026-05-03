@@ -30,6 +30,8 @@ const (
 type model struct {
 	ctx          context.Context
 	services     Services
+	width        int
+	height       int
 	mode         mode
 	activeTab    tab
 	history      []models.HistoryEntry
@@ -58,6 +60,8 @@ func newModel(ctx context.Context, services Services) (model, error) {
 	return model{
 		ctx:          ctx,
 		services:     services,
+		width:        112,
+		height:       36,
 		mode:         modeDashboard,
 		activeTab:    tabHistory,
 		history:      history,

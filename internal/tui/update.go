@@ -7,12 +7,15 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"reqium/internal/enums"
 	"reqium/internal/models"
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case tea.KeyMsg:
 		if m.mode == modeRequestForm {
 			return m.updateRequestForm(msg)
@@ -318,5 +321,3 @@ func parseHeaderBlock(input string) (map[string]string, error) {
 	}
 	return headers, nil
 }
-
-var _ = enums.MethodGET

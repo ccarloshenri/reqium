@@ -9,24 +9,24 @@ import (
 
 func (m model) View() string {
 	if m.mode == modeRequestForm {
-		return appStyle.Render(m.renderRequestForm())
+		return appStyle.Render(m.center(m.renderRequestForm()))
 	}
 	if m.mode == modeEnvForm {
-		return appStyle.Render(m.renderEnvForm())
+		return appStyle.Render(m.center(m.renderEnvForm()))
 	}
 
 	var builder strings.Builder
 	builder.WriteString(m.renderHero() + "\n\n")
 
 	if m.status != "" {
-		builder.WriteString(okStyle.Render(m.status) + "\n\n")
+		builder.WriteString(m.center(okStyle.Render(m.status)) + "\n\n")
 	}
 	if m.err != nil {
-		builder.WriteString(badStyle.Render(m.err.Error()) + "\n\n")
+		builder.WriteString(m.center(badStyle.Render(m.err.Error())) + "\n\n")
 	}
 
-	builder.WriteString(m.renderQuickActions() + "\n\n")
-	builder.WriteString(m.renderTabs() + "\n\n")
+	builder.WriteString(m.center(m.renderQuickActions()) + "\n\n")
+	builder.WriteString(m.center(m.renderTabs()) + "\n\n")
 
 	var main string
 	switch m.activeTab {
@@ -38,34 +38,58 @@ func (m model) View() string {
 		main = m.renderEnvironments()
 	}
 
-	sidebar := m.renderSidebar()
-	builder.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, sidebar, "  ", panelStyle.Width(86).Render(main)))
+	contentWidth := clamp(m.width-48, 62, 92)
+	body := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		m.renderSidebar(),
+		"  ",
+		panelStyle.Width(contentWidth).Render(main),
+	)
+	builder.WriteString(m.center(body))
 	builder.WriteString("\n")
-	builder.WriteString(helpStyle.Render("n new request  v variable  1/2/3 switch panels  r refresh  q quit"))
+	builder.WriteString(m.center(helpStyle.Render("n new request  v variable  1/2/3 panels  r refresh  q quit")))
 	builder.WriteString("\n")
+
 	return appStyle.Render(builder.String())
 }
 
 func (m model) renderHero() string {
-	logo := logoStyle.Render(strings.Join([]string{
-		"╭────────────╮     ─────○",
-		"│   >_       ├──   ─────○",
-		"╰────────────╯     ─────○",
-	}, "\n"))
-	name := wordmark.Render("reqium")
-	copy := mutedStyle.Render("Terminal API workspace")
-	return lipgloss.JoinHorizontal(lipgloss.Center, logo, "   ", lipgloss.JoinVertical(lipgloss.Left, name, copy))
+	icon := strings.Join([]string{
+		"          +----------------------+        o",
+		"          |                      |------o",
+		"          |        >_            |------o",
+		"          |                      |------o",
+		"          +----------------------+        o",
+	}, "\n")
+
+	word := strings.Join([]string{
+		"  ____  _____  ___  _   _  __  __",
+		" |  _ \\| ____|/ _ \\| | | ||  \\/  |",
+		" | |_) |  _| | | | | | | || |\\/| |",
+		" |  _ <| |___| |_| | |_| || |  | |",
+		" |_| \\_\\_____|\\__\\_\\\\___/ |_|  |_|",
+	}, "\n")
+
+	hero := lipgloss.JoinVertical(
+		lipgloss.Center,
+		logoBlue.Render(icon),
+		logoViolet.Render(word),
+		welcomeStyle.Render("Welcome to Reqium!"),
+		subtitleStyle.Render("Your terminal API workspace. Compose, send, inspect, repeat."),
+	)
+	return m.center(hero)
 }
 
 func (m model) renderQuickActions() string {
-	request := panelStyle.Width(38).Render(labelStyle.Render("New Request") + "\n" + mutedStyle.Render("Press n to compose and send from here."))
-	variable := panelStyle.Width(38).Render(labelStyle.Render("Environment Variable") + "\n" + mutedStyle.Render("Press v to add {{variables}} quickly."))
-	return lipgloss.JoinHorizontal(lipgloss.Top, request, "  ", variable)
+	request := actionCard("n", "New request", "Compose and send from inside Reqium.")
+	variable := actionCard("v", "Add variable", "Create {{variables}} for environments.")
+	history := actionCard("1", "History", "Review and replay recent calls.")
+	return lipgloss.JoinHorizontal(lipgloss.Top, request, "  ", variable, "  ", history)
 }
 
 func (m model) renderSidebar() string {
 	lines := []string{
-		titleStyle.Render("Workspace"),
+		titleStyle.Render("Workspace snapshot"),
 		fmt.Sprintf("Active env: %s", warnStyle.Render(m.activeEnvironmentName())),
 		fmt.Sprintf("History: %d", len(m.history)),
 		fmt.Sprintf("Collections: %d", len(m.collections)),
@@ -78,7 +102,7 @@ func (m model) renderSidebar() string {
 }
 
 func (m model) renderTabs() string {
-	labels := []string{"History", "Collections", "Environments"}
+	labels := []string{"1 History", "2 Collections", "3 Environments"}
 	parts := make([]string, len(labels))
 	for i, label := range labels {
 		if tab(i) == m.activeTab {
@@ -92,7 +116,7 @@ func (m model) renderTabs() string {
 
 func (m model) renderHistory() string {
 	if len(m.history) == 0 {
-		return mutedStyle.Render("No requests yet. Press n to create one.")
+		return emptyState("No requests yet", "Press n to create your first request from the UI.")
 	}
 
 	var builder strings.Builder
@@ -101,22 +125,43 @@ func (m model) renderHistory() string {
 		if entry.Error != "" || entry.StatusCode >= 400 {
 			status = badStyle.Render(fmt.Sprintf("%d", entry.StatusCode))
 		}
-		fmt.Fprintf(&builder, "%s  %s  %s\n%s\n", labelStyle.Render(entry.Method), status, entry.URL, mutedStyle.Render(entry.ID))
+		fmt.Fprintf(&builder, "%s  %s  %s\n%s\n\n", labelStyle.Render(entry.Method), status, entry.URL, mutedStyle.Render(entry.ID))
 	}
 	return builder.String()
 }
 
 func (m model) renderCollections() string {
 	if len(m.collections) == 0 {
-		return mutedStyle.Render("No collections yet. Create one with reqium collection create <name>.")
+		return emptyState("No collections yet", "Create one with reqium collection create <name>.")
 	}
 
 	var builder strings.Builder
 	for _, collection := range m.collections {
-		fmt.Fprintf(&builder, "%s  %d requests\n", collection.Name, len(collection.Requests))
+		fmt.Fprintf(&builder, "%s  %d requests\n", labelStyle.Render(collection.Name), len(collection.Requests))
 		for _, req := range collection.Requests {
 			fmt.Fprintf(&builder, "  %s  %s  %s\n", req.Name, req.Method, req.URL)
 		}
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
+func (m model) renderEnvironments() string {
+	if len(m.environments) == 0 {
+		return emptyState("No environments yet", "Press v to create a variable and activate an environment.")
+	}
+
+	var builder strings.Builder
+	for _, env := range m.environments {
+		prefix := " "
+		if env.Active {
+			prefix = "*"
+		}
+		fmt.Fprintf(&builder, "%s %s\n", prefix, labelStyle.Render(env.Name))
+		for key, value := range env.Variables {
+			fmt.Fprintf(&builder, "  %s=%s\n", key, value)
+		}
+		builder.WriteString("\n")
 	}
 	return builder.String()
 }
@@ -124,7 +169,7 @@ func (m model) renderCollections() string {
 func (m model) renderRequestForm() string {
 	var builder strings.Builder
 	builder.WriteString(m.renderHero() + "\n\n")
-	builder.WriteString(titleStyle.Render("Create Request") + "\n")
+	builder.WriteString(welcomeStyle.Render("Create a request") + "\n")
 	if m.err != nil {
 		builder.WriteString(badStyle.Render(m.err.Error()) + "\n")
 	}
@@ -135,7 +180,7 @@ func (m model) renderRequestForm() string {
 	builder.WriteString(field("Headers", m.requestForm.headers.View()) + "\n")
 	builder.WriteString(field("JSON Body", m.requestForm.body.View()) + "\n")
 	builder.WriteString(helpStyle.Render("tab next field  m/left/right method  ctrl+s send  esc dashboard"))
-	return panelStyle.Width(92).Render(builder.String())
+	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
 func (m model) renderMethodPicker() string {
@@ -157,7 +202,7 @@ func (m model) renderMethodPicker() string {
 func (m model) renderEnvForm() string {
 	var builder strings.Builder
 	builder.WriteString(m.renderHero() + "\n\n")
-	builder.WriteString(titleStyle.Render("Add Environment Variable") + "\n")
+	builder.WriteString(welcomeStyle.Render("Add an environment variable") + "\n")
 	if m.err != nil {
 		builder.WriteString(badStyle.Render(m.err.Error()) + "\n")
 	}
@@ -165,11 +210,24 @@ func (m model) renderEnvForm() string {
 	builder.WriteString(field("Key", m.envForm.key.View()) + "\n")
 	builder.WriteString(field("Value", m.envForm.value.View()) + "\n")
 	builder.WriteString(helpStyle.Render("tab next field  enter/ctrl+s save  esc dashboard"))
-	return panelStyle.Width(92).Render(builder.String())
+	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
 func field(label string, value string) string {
 	return labelStyle.Render(label) + "\n" + value + "\n"
+}
+
+func actionCard(key string, title string, description string) string {
+	content := labelStyle.Render("["+key+"] "+title) + "\n" + mutedStyle.Render(description)
+	return softPanelStyle.Width(29).Render(content)
+}
+
+func emptyState(title string, description string) string {
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		warnStyle.Render(title),
+		mutedStyle.Render(description),
+	)
 }
 
 func truncate(value string, max int) string {
@@ -180,21 +238,20 @@ func truncate(value string, max int) string {
 	return value[:max] + "..."
 }
 
-func (m model) renderEnvironments() string {
-	if len(m.environments) == 0 {
-		return mutedStyle.Render("No environments yet. Create one with reqium env create <name>.")
+func (m model) center(value string) string {
+	width := m.width - 4
+	if width < 80 {
+		width = 80
 	}
+	return lipgloss.PlaceHorizontal(width, lipgloss.Center, value)
+}
 
-	var builder strings.Builder
-	for _, env := range m.environments {
-		prefix := " "
-		if env.Active {
-			prefix = "*"
-		}
-		fmt.Fprintf(&builder, "%s %s\n", prefix, env.Name)
-		for key, value := range env.Variables {
-			fmt.Fprintf(&builder, "  %s=%s\n", key, value)
-		}
+func clamp(value int, min int, max int) int {
+	if value < min {
+		return min
 	}
-	return builder.String()
+	if value > max {
+		return max
+	}
+	return value
 }
