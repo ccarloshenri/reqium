@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -63,11 +64,11 @@ func (m model) renderHero() string {
 	}, "\n")
 
 	word := strings.Join([]string{
-		"  ____   _____   ___    ___   _   _   __  __",
-		" |  _ \\ | ____| / _ \\  |_ _| | | | | |  \\/  |",
-		" | |_) ||  _|  | | | |  | |  | | | | | |\\/| |",
-		" |  _ < | |___ | |_| |  | |  | |_| | | |  | |",
-		" |_| \\_\\|_____| \\__\\_\\ |___|  \\___/  |_|  |_|",
+		" ____   _____   ___    ___   _   _   __  __",
+		"|  _ \\ | ____| / _ \\  |_ _| | | | | |  \\/  |",
+		"| |_) ||  _|  | | | |  | |  | | | | | |\\/| |",
+		"|  _ < | |___ | |_| |  | |  | |_| | | |  | |",
+		"|_| \\_\\|_____| \\__\\_\\ |___|  \\___/  |_|  |_|",
 	}, "\n")
 
 	hero := lipgloss.JoinVertical(
@@ -177,10 +178,19 @@ func (m model) renderRequestForm() string {
 
 	builder.WriteString(m.field("Method", m.renderMethodPicker(), m.requestForm.focus == 0) + "\n")
 	builder.WriteString(m.field("URL", m.requestForm.url.View(), m.requestForm.focus == 1) + "\n")
+	if m.requestForm.focus == 1 {
+		builder.WriteString(m.renderVariableAutocomplete() + "\n")
+	}
 	builder.WriteString(m.field("Environment", m.requestForm.env.View(), m.requestForm.focus == 2) + "\n")
 	builder.WriteString(m.field("Headers", m.requestForm.headers.View(), m.requestForm.focus == 3) + "\n")
+	if m.requestForm.focus == 3 {
+		builder.WriteString(m.renderVariableAutocomplete() + "\n")
+	}
 	builder.WriteString(m.field("JSON Body", m.requestForm.body.View(), m.requestForm.focus == 4) + "\n")
-	builder.WriteString(helpStyle.Render("tab/down/j next  shift+tab/up/k previous  m method  ctrl+s send  esc dashboard"))
+	if m.requestForm.focus == 4 {
+		builder.WriteString(m.renderVariableAutocomplete() + "\n")
+	}
+	builder.WriteString(helpStyle.Render("tab next  shift+tab previous  ctrl+left/right method  ctrl+space complete variable  ctrl+s send  esc dashboard"))
 	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
@@ -210,7 +220,7 @@ func (m model) renderEnvForm() string {
 	builder.WriteString(m.field("Environment", m.envForm.env.View(), m.envForm.focus == 0) + "\n")
 	builder.WriteString(m.field("Key", m.envForm.key.View(), m.envForm.focus == 1) + "\n")
 	builder.WriteString(m.field("Value", m.envForm.value.View(), m.envForm.focus == 2) + "\n")
-	builder.WriteString(helpStyle.Render("tab/down/j next  shift+tab/up/k previous  enter/ctrl+s save  esc dashboard"))
+	builder.WriteString(helpStyle.Render("tab next  shift+tab previous  enter/ctrl+s save  esc dashboard"))
 	return panelStyle.Width(clamp(m.width-12, 82, 108)).Render(builder.String())
 }
 
@@ -250,6 +260,9 @@ func (m model) center(value string) string {
 	if width < 80 {
 		width = 80
 	}
+	if lipgloss.Width(value) > width {
+		width = lipgloss.Width(value)
+	}
 	return lipgloss.PlaceHorizontal(width, lipgloss.Center, value)
 }
 
@@ -261,4 +274,89 @@ func clamp(value int, min int, max int) int {
 		return max
 	}
 	return value
+}
+
+func (m model) renderVariableAutocomplete() string {
+	if !m.variableCompletionActive() {
+		return ""
+	}
+
+	suggestions := m.variableSuggestions()
+	if len(suggestions) == 0 {
+		return mutedStyle.Render("No environment variables available for this environment.")
+	}
+
+	items := make([]string, 0, len(suggestions))
+	for i, suggestion := range suggestions {
+		item := "{{" + suggestion + "}}"
+		if i == 0 {
+			item = activeTab.Render(item)
+		} else {
+			item = tabStyle.Render(item)
+		}
+		items = append(items, item)
+	}
+	return softPanelStyle.Width(clamp(m.width-22, 68, 96)).Render(
+		labelStyle.Render("Environment variables") + "\n" +
+			strings.Join(items, " ") + "\n" +
+			helpStyle.Render("ctrl+space inserts the highlighted variable"),
+	)
+}
+
+func (m model) variableCompletionActive() bool {
+	value := m.activeRequestInputValue()
+	start := strings.LastIndex(value, "{{")
+	if start == -1 {
+		return false
+	}
+	end := strings.LastIndex(value, "}}")
+	return end < start
+}
+
+func (m model) variableSuggestions() []string {
+	value := m.activeRequestInputValue()
+	start := strings.LastIndex(value, "{{")
+	prefix := ""
+	if start != -1 {
+		prefix = strings.TrimSpace(value[start+len("{{"):])
+		if close := strings.Index(prefix, "}}"); close >= 0 {
+			prefix = prefix[:close]
+		}
+	}
+
+	variables := m.currentVariableSet()
+	suggestions := make([]string, 0, len(variables))
+	for key := range variables {
+		if prefix == "" || strings.HasPrefix(strings.ToLower(key), strings.ToLower(prefix)) {
+			suggestions = append(suggestions, key)
+		}
+	}
+	sort.Strings(suggestions)
+	return suggestions
+}
+
+func (m model) activeRequestInputValue() string {
+	switch m.requestForm.focus {
+	case 1:
+		return m.requestForm.url.Value()
+	case 3:
+		return m.requestForm.headers.Value()
+	case 4:
+		return m.requestForm.body.Value()
+	default:
+		return ""
+	}
+}
+
+func (m model) currentVariableSet() map[string]string {
+	envName := strings.TrimSpace(m.requestForm.env.Value())
+	for _, env := range m.environments {
+		if envName != "" && env.Name == envName {
+			return env.Variables
+		}
+		if envName == "" && env.Active {
+			return env.Variables
+		}
+	}
+	return map[string]string{}
 }

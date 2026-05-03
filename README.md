@@ -57,21 +57,22 @@ q       Quit
 In the request composer:
 
 ```text
-tab/down/j       Move to the next field
-shift+tab/up/k   Move to the previous field
-m                Cycle HTTP method
-ctrl+s           Send request
-esc              Return to dashboard
+tab                Move to the next field
+shift+tab          Move to the previous field
+ctrl+left/right    Cycle HTTP method
+ctrl+space         Complete the highlighted environment variable after typing `{{`
+ctrl+s             Send request
+esc                Return to dashboard
 ```
 
 In the environment form:
 
 ```text
-tab/down/j       Move to the next field
-shift+tab/up/k   Move to the previous field
-enter            Save variable and make the environment active
-ctrl+s           Save variable and make the environment active
-esc              Return to dashboard
+tab          Move to the next field
+shift+tab    Move to the previous field
+enter        Save variable and make the environment active
+ctrl+s       Save variable and make the environment active
+esc          Return to dashboard
 ```
 
 ## Shared Request Flags

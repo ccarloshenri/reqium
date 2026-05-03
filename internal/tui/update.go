@@ -102,13 +102,16 @@ func (m model) updateRequestForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "ctrl+s":
 		return m, m.sendRequestCmd()
-	case "tab", "down", "j", "ctrl+n":
+	case "ctrl+space":
+		m.requestForm = m.applyVariableCompletion(m.requestForm)
+		return m, nil
+	case "tab", "ctrl+n":
 		m.requestForm = focusRequestField(m.requestForm, false)
 		return m, nil
-	case "shift+tab", "up", "k", "ctrl+p":
+	case "shift+tab", "ctrl+p":
 		m.requestForm = focusRequestField(m.requestForm, true)
 		return m, nil
-	case "m", "ctrl+right":
+	case "ctrl+right":
 		m.requestForm = cycleMethod(m.requestForm, false)
 		return m, nil
 	case "ctrl+left":
@@ -144,10 +147,10 @@ func (m model) updateEnvForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "ctrl+s", "enter":
 		return m, m.saveEnvCmd()
-	case "tab", "down", "j", "ctrl+n":
+	case "tab", "ctrl+n":
 		m.envForm = focusEnvField(m.envForm, false)
 		return m, nil
-	case "shift+tab", "up", "k", "ctrl+p":
+	case "shift+tab", "ctrl+p":
 		m.envForm = focusEnvField(m.envForm, true)
 		return m, nil
 	}
@@ -162,6 +165,41 @@ func (m model) updateEnvForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.envForm.value, cmd = m.envForm.value.Update(msg)
 	}
 	return m, cmd
+}
+
+func (m model) applyVariableCompletion(form requestForm) requestForm {
+	suggestions := m.variableSuggestions()
+	if len(suggestions) == 0 {
+		return form
+	}
+	selected := suggestions[0]
+
+	switch form.focus {
+	case 1:
+		form.url.SetValue(completeVariable(form.url.Value(), selected))
+		form.url.CursorEnd()
+	case 3:
+		form.headers.SetValue(completeVariable(form.headers.Value(), selected))
+		form.headers.CursorEnd()
+	case 4:
+		form.body.SetValue(completeVariable(form.body.Value(), selected))
+		form.body.CursorEnd()
+	}
+	return form
+}
+
+func completeVariable(value string, variable string) string {
+	start := strings.LastIndex(value, "{{")
+	if start == -1 {
+		return value
+	}
+	replacement := "{{" + variable + "}}"
+	end := strings.Index(value[start:], "}}")
+	if end == -1 {
+		return value[:start] + replacement
+	}
+	end = start + end + len("}}")
+	return value[:start] + replacement + value[end:]
 }
 
 func focusRequestField(form requestForm, backwards bool) requestForm {
