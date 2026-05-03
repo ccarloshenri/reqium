@@ -44,6 +44,34 @@ Run without arguments to open the terminal UI:
 reqium
 ```
 
+Inside the UI:
+
+```text
+n       Compose and send a request
+v       Add or update an environment variable
+1/2/3   Switch between history, collections, and environments
+r       Refresh workspace data
+q       Quit
+```
+
+In the request composer:
+
+```text
+tab       Move between method, URL, environment, headers, and body
+m         Cycle HTTP method
+ctrl+s    Send request
+esc       Return to dashboard
+```
+
+In the environment form:
+
+```text
+tab       Move between environment, key, and value
+enter     Save variable and make the environment active
+ctrl+s    Save variable and make the environment active
+esc       Return to dashboard
+```
+
 ## Shared Request Flags
 
 ```text

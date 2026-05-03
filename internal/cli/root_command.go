@@ -48,6 +48,10 @@ func NewRootCommand() *cobra.Command {
 				History:      historyRepo,
 				Environments: envRepo,
 				Collections:  collectionRepo,
+				Requests:     requestService,
+				EnvService:   envService,
+				Resolver:     resolver,
+				Formatter:    formatter.NewResponseFormatter(true),
 			})
 		},
 	}

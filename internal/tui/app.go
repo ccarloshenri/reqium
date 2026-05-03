@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"reqium/internal/app"
 	"reqium/internal/interfaces"
 )
 
@@ -12,6 +13,10 @@ type Services struct {
 	History      interfaces.HistoryRepository
 	Environments interfaces.EnvironmentRepository
 	Collections  interfaces.CollectionRepository
+	Requests     *app.RequestService
+	EnvService   *app.EnvironmentService
+	Resolver     interfaces.VariableResolver
+	Formatter    interfaces.Formatter
 }
 
 func Run(ctx context.Context, services Services) error {
