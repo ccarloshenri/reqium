@@ -1,14 +1,14 @@
-package domain
+package models
 
 import (
 	"encoding/json"
 	"net/url"
-	"slices"
 	"strings"
 	"time"
-)
 
-var allowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
+	"reqium/internal/enums"
+	reqerrors "reqium/internal/errors"
+)
 
 type Request struct {
 	Method  string
@@ -20,24 +20,24 @@ type Request struct {
 
 func (r Request) Validate() error {
 	if strings.TrimSpace(r.URL) == "" {
-		return ErrMissingURL
+		return reqerrors.ErrMissingURL
 	}
 
 	parsed, err := url.ParseRequestURI(r.URL)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return ErrInvalidURL
+		return reqerrors.ErrInvalidURL
 	}
 
-	if !slices.Contains(allowedMethods, strings.ToUpper(r.Method)) {
-		return ErrInvalidMethod
+	if !enums.ValidHTTPMethod(strings.ToUpper(r.Method)) {
+		return reqerrors.ErrInvalidMethod
 	}
 
 	if r.Timeout <= 0 {
-		return ErrInvalidTimeout
+		return reqerrors.ErrInvalidTimeout
 	}
 
 	if len(r.Body) > 0 && !json.Valid(r.Body) {
-		return ErrInvalidJSON
+		return reqerrors.ErrInvalidJSON
 	}
 
 	return nil

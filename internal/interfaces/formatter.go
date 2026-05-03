@@ -1,7 +1,7 @@
 package interfaces
 
-import "reqium/internal/domain"
+import "reqium/internal/models"
 
 type Formatter interface {
-	Format(response domain.Response) (string, error)
+	Format(response models.Response) (string, error)
 }

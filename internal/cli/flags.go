@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"reqium/internal/domain"
+	"reqium/internal/enums"
+	reqerrors "reqium/internal/errors"
 	"reqium/internal/interfaces"
+	"reqium/internal/models"
 )
 
 type requestOptions struct {
@@ -16,6 +18,7 @@ type requestOptions struct {
 	bodyFile   string
 	timeoutSec int
 	pretty     bool
+	env        string
 }
 
 func parseHeaders(values []string) (map[string]string, error) {
@@ -43,22 +46,22 @@ func loadBody(opts requestOptions, reader interfaces.FileReader) ([]byte, error)
 	return nil, nil
 }
 
-func buildRequest(method string, url string, opts requestOptions, reader interfaces.FileReader) (domain.Request, error) {
+func buildRequest(method string, url string, opts requestOptions, reader interfaces.FileReader) (models.Request, error) {
 	headers, err := parseHeaders(opts.headers)
 	if err != nil {
-		return domain.Request{}, err
+		return models.Request{}, err
 	}
 
 	body, err := loadBody(opts, reader)
 	if err != nil {
-		return domain.Request{}, err
+		return models.Request{}, err
 	}
 
 	if len(body) > 0 && !methodAllowsBody(method) {
-		return domain.Request{}, fmt.Errorf("body is only accepted for POST, PUT, and PATCH")
+		return models.Request{}, fmt.Errorf("body is only accepted for POST, PUT, and PATCH")
 	}
 
-	return domain.Request{
+	return models.Request{
 		Method:  method,
 		URL:     url,
 		Headers: headers,
@@ -73,16 +76,11 @@ func parseTimeout(value string) (int, error) {
 		return 0, fmt.Errorf("timeout must be a whole number of seconds")
 	}
 	if seconds <= 0 {
-		return 0, domain.ErrInvalidTimeout
+		return 0, reqerrors.ErrInvalidTimeout
 	}
 	return seconds, nil
 }
 
 func methodAllowsBody(method string) bool {
-	switch method {
-	case "POST", "PUT", "PATCH":
-		return true
-	default:
-		return false
-	}
+	return enums.MethodAllowsBody(method)
 }

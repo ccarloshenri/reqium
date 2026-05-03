@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"reqium/internal/domain"
+	"reqium/internal/models"
 )
 
 type ResponseFormatter struct {
@@ -20,7 +20,7 @@ func NewResponseFormatter(prettyJSON bool) *ResponseFormatter {
 	}
 }
 
-func (f *ResponseFormatter) Format(response domain.Response) (string, error) {
+func (f *ResponseFormatter) Format(response models.Response) (string, error) {
 	var builder strings.Builder
 
 	fmt.Fprintf(&builder, "Status: %d\n", response.StatusCode)

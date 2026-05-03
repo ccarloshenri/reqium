@@ -3,9 +3,9 @@ package interfaces
 import (
 	"context"
 
-	"reqium/internal/domain"
+	"reqium/internal/models"
 )
 
 type HTTPClient interface {
-	Do(ctx context.Context, req domain.Request) (domain.Response, error)
+	Do(ctx context.Context, req models.Request) (models.Response, error)
 }

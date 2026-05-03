@@ -6,12 +6,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"reqium/internal/app"
-	"reqium/internal/infrastructure/formatter"
-	"reqium/internal/infrastructure/http"
-	"reqium/internal/interfaces"
+	respformatter "reqium/internal/implementations/formatter"
 )
 
-func newMethodCommand(methodName string, method string, client *http.NetHTTPClient, reader interfaces.FileReader) *cobra.Command {
+func newMethodCommand(methodName string, method string, deps dependencies) *cobra.Command {
 	opts := requestOptions{
 		timeoutSec: 30,
 		pretty:     true,
@@ -22,13 +20,22 @@ func newMethodCommand(methodName string, method string, client *http.NetHTTPClie
 		Short: "Send a " + method + " request",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			req, err := buildRequest(method, args[0], opts, reader)
+			req, err := buildRequest(method, args[0], opts, deps.reader)
 			if err != nil {
 				return err
 			}
 
-			service := app.NewRequestService(client, formatter.NewResponseFormatter(opts.pretty))
-			output, err := service.Send(cmd.Context(), req)
+			variables, err := deps.envService.Variables(cmd.Context(), opts.env)
+			if err != nil {
+				return err
+			}
+			req, err = deps.resolver.ResolveRequest(req, variables)
+			if err != nil {
+				return err
+			}
+
+			service := app.NewRequestServiceWithHistory(deps.client, respformatter.NewResponseFormatter(opts.pretty), deps.historyRepo)
+			output, err := service.SendFormatted(cmd.Context(), req)
 			if err != nil {
 				return err
 			}
@@ -43,6 +50,7 @@ func newMethodCommand(methodName string, method string, client *http.NetHTTPClie
 	cmd.Flags().StringVarP(&opts.bodyFile, "body-file", "f", "", "load request body from file")
 	cmd.Flags().IntVarP(&opts.timeoutSec, "timeout", "t", 30, "request timeout in seconds")
 	cmd.Flags().BoolVar(&opts.pretty, "pretty", true, "pretty-print JSON responses")
+	cmd.Flags().StringVar(&opts.env, "env", "", "environment to resolve {{variables}}")
 
 	return cmd
 }
