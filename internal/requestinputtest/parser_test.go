@@ -1,9 +1,11 @@
-package cli
+package requestinputtest
 
 import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"reqium/internal/requestinput"
 )
 
 type fakeFileReader struct {
@@ -16,7 +18,7 @@ func (r fakeFileReader) Read(path string) ([]byte, error) {
 }
 
 func TestParseHeaders(t *testing.T) {
-	headers, err := parseHeaders([]string{
+	headers, err := requestinput.ParseHeaders([]string{
 		"Authorization: Bearer token",
 		"Content-Type: application/json",
 	})
@@ -34,14 +36,14 @@ func TestParseHeaders(t *testing.T) {
 }
 
 func TestParseHeadersRejectsInvalidHeader(t *testing.T) {
-	_, err := parseHeaders([]string{"Authorization"})
+	_, err := requestinput.ParseHeaders([]string{"Authorization"})
 	if err == nil {
 		t.Fatal("expected invalid header error")
 	}
 }
 
 func TestLoadBodyFromRawString(t *testing.T) {
-	body, err := loadBody(requestOptions{body: `{"name":"John"}`}, fakeFileReader{})
+	body, err := requestinput.LoadBody(requestinput.BodyOptions{Body: `{"name":"John"}`}, fakeFileReader{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -52,7 +54,7 @@ func TestLoadBodyFromRawString(t *testing.T) {
 
 func TestLoadBodyFromFile(t *testing.T) {
 	reader := fakeFileReader{data: []byte(`{"name":"Jane"}`)}
-	body, err := loadBody(requestOptions{bodyFile: "payload.json"}, reader)
+	body, err := requestinput.LoadBody(requestinput.BodyOptions{BodyFile: "payload.json"}, reader)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -62,17 +64,16 @@ func TestLoadBodyFromFile(t *testing.T) {
 }
 
 func TestLoadBodyRejectsRawAndFileTogether(t *testing.T) {
-	_, err := loadBody(requestOptions{body: "{}", bodyFile: "payload.json"}, fakeFileReader{})
+	_, err := requestinput.LoadBody(requestinput.BodyOptions{Body: "{}", BodyFile: "payload.json"}, fakeFileReader{})
 	if err == nil {
 		t.Fatal("expected conflict error")
 	}
 }
 
 func TestBuildRequestRejectsBodyForGet(t *testing.T) {
-	_, err := buildRequest("GET", "https://api.example.com/users", requestOptions{
-		body:       "{}",
-		timeoutSec: 30,
-	}, fakeFileReader{})
+	_, err := requestinput.BuildRequest("GET", "https://api.example.com/users", nil, requestinput.BodyOptions{
+		Body: "{}",
+	}, 30, fakeFileReader{})
 	if err == nil {
 		t.Fatal("expected body method error")
 	}
@@ -80,7 +81,7 @@ func TestBuildRequestRejectsBodyForGet(t *testing.T) {
 
 func TestLoadBodyReturnsFileError(t *testing.T) {
 	expected := errors.New("read failed")
-	_, err := loadBody(requestOptions{bodyFile: "payload.json"}, fakeFileReader{err: expected})
+	_, err := requestinput.LoadBody(requestinput.BodyOptions{BodyFile: "payload.json"}, fakeFileReader{err: expected})
 	if !errors.Is(err, expected) {
 		t.Fatalf("expected %v, got %v", expected, err)
 	}

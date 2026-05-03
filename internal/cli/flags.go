@@ -3,13 +3,12 @@ package cli
 import (
 	"fmt"
 	"strconv"
-	"strings"
-	"time"
 
 	"reqium/internal/enums"
 	reqerrors "reqium/internal/errors"
 	"reqium/internal/interfaces"
 	"reqium/internal/models"
+	"reqium/internal/requestinput"
 )
 
 type requestOptions struct {
@@ -22,52 +21,22 @@ type requestOptions struct {
 }
 
 func parseHeaders(values []string) (map[string]string, error) {
-	headers := make(map[string]string, len(values))
-	for _, header := range values {
-		key, value, ok := strings.Cut(header, ":")
-		if !ok || strings.TrimSpace(key) == "" {
-			return nil, fmt.Errorf("invalid header %q: expected Key: Value", header)
-		}
-		headers[strings.TrimSpace(key)] = strings.TrimSpace(value)
-	}
-	return headers, nil
+	return requestinput.ParseHeaders(values)
 }
 
 func loadBody(opts requestOptions, reader interfaces.FileReader) ([]byte, error) {
-	if opts.body != "" && opts.bodyFile != "" {
-		return nil, fmt.Errorf("--body and --body-file cannot be used together")
-	}
-	if opts.bodyFile != "" {
-		return reader.Read(opts.bodyFile)
-	}
-	if opts.body != "" {
-		return []byte(opts.body), nil
-	}
-	return nil, nil
+	return requestinput.LoadBody(requestinput.BodyOptions{Body: opts.body, BodyFile: opts.bodyFile}, reader)
 }
 
 func buildRequest(method string, url string, opts requestOptions, reader interfaces.FileReader) (models.Request, error) {
-	headers, err := parseHeaders(opts.headers)
-	if err != nil {
-		return models.Request{}, err
-	}
-
-	body, err := loadBody(opts, reader)
-	if err != nil {
-		return models.Request{}, err
-	}
-
-	if len(body) > 0 && !methodAllowsBody(method) {
-		return models.Request{}, fmt.Errorf("body is only accepted for POST, PUT, and PATCH")
-	}
-
-	return models.Request{
-		Method:  method,
-		URL:     url,
-		Headers: headers,
-		Body:    body,
-		Timeout: time.Duration(opts.timeoutSec) * time.Second,
-	}, nil
+	return requestinput.BuildRequest(
+		method,
+		url,
+		opts.headers,
+		requestinput.BodyOptions{Body: opts.body, BodyFile: opts.bodyFile},
+		opts.timeoutSec,
+		reader,
+	)
 }
 
 func parseTimeout(value string) (int, error) {
