@@ -1,110 +1,137 @@
 # Reqium
 
-Reqium is a terminal-first API client built in Go. It starts fast like a lightweight `curl` replacement, but also gives you local workspaces for request history, environments, collections, collection runs, and an interactive terminal UI.
+Reqium is a terminal API client for sending requests, managing environments, saving history, and running collections without leaving your command line.
 
-## Features
-
-- Direct HTTP requests from the terminal
-- HTTP methods: `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
-- Custom repeatable headers with `--header` or `-H`
-- Raw JSON request bodies with `--body` or `-b`
-- Request bodies loaded from files with `--body-file` or `-f`
-- Response status, headers, body, and duration output
-- JSON response pretty-printing by default
-- Local request history with replay
-- Local environments with `{{variable}}` resolution
-- Collections with saved requests
-- Collection runner with per-request results
-- Interactive terminal UI with history, collections, and environments
-- Clean architecture with models, enums, interfaces, app services, and implementations
-
-## Installation
-
-Build from source:
-
-```bash
-go build -o bin/reqium ./cmd/reqium
-```
-
-Optionally move the generated binary into a directory on your `PATH`.
-
-## Quick Usage
-
-```bash
-reqium get https://api.example.com/users
-reqium post https://api.example.com/users --header "Content-Type: application/json" --body '{"name":"John"}'
-reqium put https://api.example.com/users/1 --body-file ./payload.json
-reqium patch https://api.example.com/users/1 -H "Content-Type: application/json" -b '{"name":"Jane"}'
-reqium delete https://api.example.com/users/1
-```
-
-Run without arguments to open the terminal UI:
+Open the interactive interface:
 
 ```bash
 reqium
 ```
 
-Inside the UI:
+Or send requests directly:
+
+```bash
+reqium get https://api.example.com/users
+reqium post https://api.example.com/users -H "Content-Type: application/json" -b '{"name":"John"}'
+```
+
+## What You Can Do
+
+- Send `GET`, `POST`, `PUT`, `PATCH`, and `DELETE` requests
+- Add custom headers
+- Send raw JSON bodies
+- Load request body from a file
+- Pretty-print JSON responses
+- Save local request history
+- Create environments with variables like `{{base_url}}`
+- Save reusable requests in collections
+- Run collections from the terminal
+- Use an interactive terminal UI
+
+## Install
+
+From the project folder:
+
+```bash
+go install ./cmd/reqium
+```
+
+Then run:
+
+```bash
+reqium
+```
+
+## Interactive UI
+
+Start Reqium:
+
+```bash
+reqium
+```
+
+Main shortcuts:
 
 ```text
-n       Compose and send a request
+n       Create and send a request
 v       Add or update an environment variable
-1/2/3   Switch between history, collections, and environments
-r       Refresh workspace data
+1       Show history
+2       Show collections
+3       Show environments
+r       Refresh
 q       Quit
 ```
 
-In the request composer:
+Request composer:
 
 ```text
-tab                Move to the next field, or complete the highlighted variable when suggestions are open
-shift+tab          Move to the previous field
-enter              Complete the highlighted variable when suggestions are open
-ctrl+left/right    Cycle HTTP method
-ctrl+space         Complete variable in terminals that support it
-ctrl+@             Complete variable in terminals that emit Ctrl+Space as Ctrl+@
+tab                Next field
+shift+tab          Previous field
+ctrl+left/right    Change HTTP method
 ctrl+s             Send request
-esc                Return to dashboard
+esc                Back to dashboard
 ```
 
-In the environment form:
+Variable autocomplete:
 
 ```text
-tab          Move to the next field
-shift+tab    Move to the previous field
-enter        Save variable and make the environment active
-ctrl+s       Save variable and make the environment active
-esc          Return to dashboard
+Type {{ in URL, headers, or body.
+Press tab or enter to insert the highlighted variable.
 ```
 
-## Shared Request Flags
+## Direct Requests
+
+```bash
+reqium get https://api.example.com/users
+reqium delete https://api.example.com/users/1
+```
+
+With headers:
+
+```bash
+reqium get https://api.example.com/users -H "Authorization: Bearer token"
+```
+
+With JSON body:
+
+```bash
+reqium post https://api.example.com/users \
+  -H "Content-Type: application/json" \
+  -b '{"name":"John"}'
+```
+
+With body from file:
+
+```bash
+reqium put https://api.example.com/users/1 -f ./payload.json
+```
+
+Common flags:
 
 ```text
--H, --header      Custom header in "Key: Value" format. Repeatable.
--b, --body        Raw request body.
--f, --body-file   Load request body from file.
--t, --timeout     Request timeout in seconds. Default: 30.
-    --pretty      Pretty-print JSON responses. Default: true.
-    --env         Environment to resolve {{variables}}.
+-H, --header      Header in "Key: Value" format
+-b, --body        Raw JSON body
+-f, --body-file   Load body from file
+-t, --timeout     Timeout in seconds
+    --env         Environment to use
+    --pretty      Pretty-print JSON responses
 ```
 
 ## Environments
 
-Create environments and use variables in URLs, headers, and bodies:
+Create an environment:
 
 ```bash
 reqium env create dev
 reqium env set dev base_url https://api.example.com
 reqium env set dev token abc123
 reqium env use dev
-reqium env list
 ```
 
-Use variables in requests:
+Use variables:
 
 ```bash
 reqium get "{{base_url}}/users" -H "Authorization: Bearer {{token}}"
-reqium post "{{base_url}}/users" -H "Content-Type: application/json" -b '{"name":"John"}'
 ```
 
 Use a specific environment:
@@ -115,25 +142,27 @@ reqium get "{{base_url}}/users" --env dev
 
 ## History
 
-Reqium stores executed requests locally.
-
 ```bash
 reqium history list
-reqium history list --limit 50
 reqium history show <id>
 reqium history replay <id>
 ```
 
 ## Collections
 
-Create collections and save reusable requests:
+Create a collection:
 
 ```bash
 reqium collection create users
+```
+
+Add requests:
+
+```bash
 reqium collection add users list-users GET "{{base_url}}/users"
-reqium collection add users create-user POST "{{base_url}}/users" -H "Content-Type: application/json" -b '{"name":"John"}'
-reqium collection list
-reqium collection show users
+reqium collection add users create-user POST "{{base_url}}/users" \
+  -H "Content-Type: application/json" \
+  -b '{"name":"John"}'
 ```
 
 Run a collection:
@@ -142,52 +171,14 @@ Run a collection:
 reqium run users --env dev
 ```
 
-## Local Storage
+## Local Data
 
-Reqium stores local data in your user config directory:
+Reqium stores history, environments, and collections locally in:
 
 ```text
 <user-config-dir>/reqium/store.json
 ```
 
-The app layer depends on repository interfaces, so the storage implementation can be replaced later without changing CLI or TUI use cases.
-
-## Project Structure
-
-```text
-cmd/reqium/                 Application entrypoint
-internal/app/               Use case orchestration
-internal/models/            Request, response, history, environment, collection, runner models
-internal/enums/             Typed constants such as HTTP methods and runner status
-internal/errors/            Shared application errors
-internal/interfaces/        Ports for HTTP, formatting, storage, files, and variables
-internal/implementations/   HTTP, formatting, filesystem, storage, and variable adapters
-internal/cli/               Thin Cobra command layer
-internal/tui/               Bubble Tea terminal UI
-pkg/version/                Public version package
-```
-
-## Developer Commands
-
-```bash
-make run
-make test
-make build
-make fmt
-```
-
-## Roadmap
-
-- SQLite storage adapter
-- Request tabs in the interactive UI
-- Full request editor inside the TUI
-- Import/export collections
-- Postman collection import
-- OpenAPI import
-- Concurrent request runner
-- Response assertions for API testing
-- Collection-level pre-request scripts
-
 ## License
 
-This project is provided under the MIT License.
+MIT
